@@ -2,10 +2,14 @@
 
 require_once(APPPATH . 'libraries/paypal-php-sdk/paypal/rest-api-sdk-php/sample/bootstrap.php'); // require paypal files
 
+
 use PayPal\Api\ItemList;
 use PayPal\Api\Payment;
 use PayPal\Api\RedirectUrls;
+use PayPal\Api\Amount;
 use PayPal\Api\PaymentExecution;
+use PayPal\Api\RefundRequest;
+use PayPal\Api\Sale;
 
 class Paypal extends CI_Controller
 {
@@ -187,7 +191,49 @@ class Paypal extends CI_Controller
         $this->load->view("content/success");
     }
     function cancel(){
-        $this->paypal->create_payment();
         $this->load->view("content/cancel");
+    }
+
+    function load_refund_form(){
+        $this->load->view('content/Refund_payment_form');
+    }
+
+    function refund_payment(){
+        $refund_amount = $this->input->post('refund_amount');
+        $saleId = $this->input->post('sale_id');
+        $paymentValue =  (string) round($refund_amount,2); ;
+
+// ### Refund amount
+// Includes both the refunded amount (to Payer)
+// and refunded fee (to Payee). Use the $amt->details
+// field to mention fees refund details.
+        $amt = new Amount();
+        $amt->setCurrency('USD')
+            ->setTotal($paymentValue);
+
+// ### Refund object
+        $refundRequest = new RefundRequest();
+        $refundRequest->setAmount($amt);
+
+// ###Sale
+// A sale transaction.
+// Create a Sale object with the
+// given sale transaction id.
+        $sale = new Sale();
+        $sale->setId($saleId);
+        try {
+            // Refund the sale
+            // (See bootstrap.php for more on `ApiContext`)
+            $refundedSale = $sale->refundSale($refundRequest, $this->_api_context);
+        } catch (Exception $ex) {
+            // NOTE: PLEASE DO NOT USE RESULTPRINTER CLASS IN YOUR ORIGINAL CODE. FOR SAMPLE ONLY
+            ResultPrinter::printError("Refund Sale", "Sale", null, $refundRequest, $ex);
+            exit(1);
+        }
+
+// NOTE: PLEASE DO NOT USE RESULTPRINTER CLASS IN YOUR ORIGINAL CODE. FOR SAMPLE ONLY
+        ResultPrinter::printResult("Refund Sale", "Sale", $refundedSale->getId(), $refundRequest, $refundedSale);
+
+        return $refundedSale;
     }
 }
