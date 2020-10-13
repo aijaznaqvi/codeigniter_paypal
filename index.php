@@ -290,4 +290,6 @@ switch (ENVIRONMENT)
  *
  * And away we go...
  */
+//var_dump(BASEPATH);exit;
 require_once BASEPATH.'core/CodeIgniter.php';
+//require_once "C:/xampp/htdocs/codeigniter_paypal/system/".'core/CodeIgniter.php';

@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `payments` (
-  `txn_id` int(11) NOT NULL,
+  `txn_id` varchar(20) NOT NULL,
   `PaymentMethod` varchar(50) NOT NULL,
   `PayerStatus` varchar(50) NOT NULL,
   `PayerMail` int(100) NOT NULL,

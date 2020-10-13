@@ -2,6 +2,7 @@
 
 require_once(APPPATH . 'libraries/paypal-php-sdk/paypal/rest-api-sdk-php/sample/bootstrap.php'); // require paypal files
 
+require 'vendor/autoload.php';
 
 use PayPal\Api\ItemList;
 use PayPal\Api\Payment;
@@ -10,6 +11,8 @@ use PayPal\Api\Amount;
 use PayPal\Api\PaymentExecution;
 use PayPal\Api\RefundRequest;
 use PayPal\Api\Sale;
+
+use GuzzleHttp\Client;
 
 class Paypal extends CI_Controller
 {
@@ -54,7 +57,7 @@ class Paypal extends CI_Controller
         $item1["name"] = $this->input->post('item_name');
         $item1["sku"] = $this->input->post('item_number');  // Similar to `item_number` in Classic API
         $item1["description"] = $this->input->post('item_description');
-        $item1["currency"] ="USD";
+        $item1["currency"] ="CAD";
         $item1["quantity"] =1;
         $item1["price"] = $this->input->post('item_price');
 
@@ -71,7 +74,7 @@ class Paypal extends CI_Controller
 // Lets you specify a payment amount.
 // You can also specify additional details
 // such as shipping, tax.
-        $amount['currency'] = "USD";
+        $amount['currency'] = "CAD";
         $amount['total'] = $details['tax'] + $details['subtotal'];
         $amount['details'] = $details;
 // ### Transaction
@@ -198,6 +201,9 @@ class Paypal extends CI_Controller
         $this->load->view('content/Refund_payment_form');
     }
 
+    /**
+     * Refund payment implemented using the sdk
+     */
     function refund_payment(){
         $refund_amount = $this->input->post('refund_amount');
         $saleId = $this->input->post('sale_id');
@@ -208,7 +214,7 @@ class Paypal extends CI_Controller
 // and refunded fee (to Payee). Use the $amt->details
 // field to mention fees refund details.
         $amt = new Amount();
-        $amt->setCurrency('USD')
+        $amt->setCurrency('CAD')
             ->setTotal($paymentValue);
 
 // ### Refund object
@@ -236,4 +242,253 @@ class Paypal extends CI_Controller
 
         return $refundedSale;
     }
+
+    function load_refund_form_curl(){
+        $this->load->view('content/Refund_payment_form_curl');
+    }
+
+    /**
+     * Refund captured payment implemented using the cURL
+     * Don't need to use sdk
+     */
+    function refund_payment_curl(){
+        $refund_amount = $this->input->post('refund_amount');
+        $saleId = $this->input->post('sale_id');
+        $paymentValue =  (string) round($refund_amount,2); ;
+
+//        $refNumber = '7NX14271YD321594B'; // PayPal transaction ID
+//        $FinalTotal = '67.80'; // order total
+
+        // get PayPal access token via cURL
+        $ch = curl_init();
+        $clientId = "AbqfolVlfz83oAeZmhbztPaZaBZV7uH62w5SYVtLpaeRhD_2IPKrQw2Sc3YRhr8PSGFjYSOoyVUG5tZI";
+        $secret = "EKvSawiTVuOiHddWNuW-dTxkR01n5ZqZfvI08w3xohNXJljEVihrmkOGRt1TInQaSmTn7obxQwpxV8Dw";
+
+        curl_setopt($ch, CURLOPT_URL, "https://api.sandbox.paypal.com/v1/oauth2/token");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Accept: application/json',
+            'Accept-Language: en_US'
+        ));
+        curl_setopt($ch, CURLOPT_USERPWD, $clientId.":".$secret);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $output = curl_exec($ch);
+
+        if(empty($output)){
+            die("Error: No response.");
+        }
+
+        $json = json_decode($output);
+        $token = $json->access_token; // this is our PayPal access token
+
+        curl_close($ch);
+
+        // refund PayPal sale via cURL
+        $header = Array(
+            "Content-Type: application/json",
+            "Authorization: Bearer $token",
+        );
+        $ch = curl_init("https://api.sandbox.paypal.com/v2/payments/captures/$saleId/refund");
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, '{}');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        $output = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if(empty($output)){
+            die("Error: No response. Code:" . $code);
+        }
+
+        $res = json_decode($output);
+        curl_close($ch);
+
+        // if res has a state, retrieve it
+        if(isset($res->status)){
+            $status = $res->status;
+        }else{
+            $status = NULL; // otherwise, set to NULL
+        }
+
+        // if we have a state in the response...
+        if($status == 'COMPLETED'){
+            // the refund was successful
+            $this->session->set_flashdata('success_msg','Refund success');
+            redirect('paypal/index');
+        }else{
+            // the refund failed
+            $errorName = $res->details[0]->issue; // ex. 'Transaction Refused.'
+            $errorReason = $res->details[0]->description; // ex. 'The requested transaction has already been fully refunded.'
+            echo 'errorName: ' . $errorName . '<br/>';
+            echo 'errorReason: ' . $errorReason . '<br/>';
+//            $this->session->set_flashdata('error_msg','Refund failed' . '<br/>' . 'errorName: ' . $errorName . '<br/>' . 'errorReason: ' . $errorReason);
+//            redirect('paypal/index');
+        }
+    }
+
+    function load_refund_form_guzzle(){
+        $this->load->view('content/Refund_payment_form_guzzle');
+    }
+
+    /**
+     * Refund captured payment implemented using the Guzzle
+     * Don't need to use sdk
+     */
+    function refund_payment_guzzle(){
+        $refund_amount = $this->input->post('refund_amount');
+        $saleId = $this->input->post('sale_id');
+        $paymentValue =  (string) round($refund_amount,2);
+
+//        $refNumber = '7NX14271YD321594B'; // PayPal transaction ID
+//        $FinalTotal = '67.80'; // order total
+
+        // get PayPal access token via Guzzle
+        $uri = 'https://api.sandbox.paypal.com/v1/oauth2/token';
+        $clientId = "AbqfolVlfz83oAeZmhbztPaZaBZV7uH62w5SYVtLpaeRhD_2IPKrQw2Sc3YRhr8PSGFjYSOoyVUG5tZI"; //Your client_id which you got on sign up;
+        $secret = "EKvSawiTVuOiHddWNuW-dTxkR01n5ZqZfvI08w3xohNXJljEVihrmkOGRt1TInQaSmTn7obxQwpxV8Dw"; //Your secret which you got on sign up;
+
+        $client = new Client();
+        $response = $client->request('POST', $uri, [
+        'headers' =>
+            [
+                'Accept' => 'application/json',
+                'Accept-Language' => 'en_US',
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ],
+        'body' => 'grant_type=client_credentials',
+
+        'auth' => [$clientId, $secret, 'basic']
+    ]);
+
+        $data = json_decode($response->getBody(), true);
+        $token = $data['access_token'];
+
+        // refund PayPal sale via Guzzle
+        $header = Array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer $token",
+        );
+        $uri = "https://api.sandbox.paypal.com/v2/payments/captures/$saleId/refund";
+
+        $bodyParams = new stdClass();
+        if($refund_amount){
+            $bodyParams->amount = new stdClass();
+            $bodyParams->amount->value = $refund_amount;
+            $bodyParams->amount->currency_code = 'CAD';
+        }
+        $note = 'Defective product';
+        if($note){
+            $bodyParams->note_to_payer = $note;
+        }
+        $jsonBodyParams = json_encode($bodyParams);
+//        echo 'jsonBodyParams=' . $jsonBodyParams . '<br/>';
+
+        $client = new Client();
+        $response = $client->request('POST', $uri, [
+            'headers' => $header,
+            'body' => $jsonBodyParams
+        ]);
+
+        $output = $response->getBody();
+
+        if(empty($output)){
+            die("Error: No response.");
+        }
+
+        $res = json_decode($output);
+
+        // if res has a status, retrieve it
+        if(isset($res->status)){
+            $status = $res->status;
+        }else{
+            $status = NULL; // otherwise, set to NULL
+        }
+
+        // if we have a status in the response...
+        if($status == 'COMPLETED'){
+            // the refund was successful
+//            echo 'The refund was successful' . '<br>';
+//            echo 'res=';
+//            echo '<pre>';
+//            var_dump($res);
+//            echo '</pre>';
+
+            // begin refund detail
+//            echo 'refundId=' . $res->id . '<br>';
+            $refundId = $res->id;
+
+            // refund PayPal sale via Guzzle
+            $header = Array(
+                "Content-Type" => "application/json",
+                "Authorization" => "Bearer $token",
+            );
+//            $uri = "https://api.sandbox.paypal.com/v2/payments/refunds/$refundId";
+//            echo 'res->links[0]->href=' . $res->links[0]->href . '<br>';
+            $uri = $res->links[0]->href;
+
+            $client = new Client();
+            $response = $client->request('GET', $uri, [
+                'headers' => $header
+            ]);
+
+            $output = $response->getBody();
+
+            if(empty($output)){
+                die("Error: No response.");
+            }
+
+            $res1 = json_decode($output);
+
+            // if res has a status, retrieve it
+            if(isset($res1->status)){
+                $status1 = $res1->status;
+            }else{
+                $status1 = NULL; // otherwise, set to NULL
+            }
+
+            // if we have a status in the response...
+            if($status1 == 'COMPLETED'){
+                // the refund was successful
+//                echo 'the refund was successful' . '<br>';
+//                echo 'res1=';
+//                echo '<pre>';
+//                var_dump($res1);
+//                echo '</pre>';
+                echo 'REFUNDTRANSACTIONID=' . $res1->id . '<br>';
+                echo 'FEEREFUNDAMT=' . $res1->seller_payable_breakdown->paypal_fee->value . '<br>';
+                echo 'GROSSREFUNDAMT=' . $res1->seller_payable_breakdown->gross_amount->value . '<br>';
+                echo 'NETREFUNDAMT=' . $res1->seller_payable_breakdown->net_amount->value . '<br>';
+                echo 'CURRENCYCODE=' . $res1->amount->currency_code . '<br>';
+                echo 'TOTALREFUNDEDAMOUNT=' . $res1->seller_payable_breakdown->total_refunded_amount->value . '<br>';
+                echo 'ACK=' . 'Success' . '<br>';
+//                echo 'REFUNDSTATUS=' . 'Instant' . '<br>';
+//                echo 'PENDINGREASON=' . 'None' . '<br>';
+
+                //            $this->session->set_flashdata('success_msg','Refund success');
+//            redirect('paypal/index');
+            }else{
+                // the refund failed
+                $errorName1 = $res1->details[0]->issue; // ex. 'Transaction Refused.'
+                $errorReason1 = $res1->details[0]->description; // ex. 'The requested transaction has already been fully refunded.'
+                echo 'errorName1: ' . $errorName1 . '<br/>';
+                echo 'errorReason1: ' . $errorReason1 . '<br/>';
+//            $this->session->set_flashdata('error_msg','Refund failed' . '<br/>' . 'errorName: ' . $errorName . '<br/>' . 'errorReason: ' . $errorReason);
+//            redirect('paypal/index');
+            }
+            // end refund detail
+//            $this->session->set_flashdata('success_msg','Refund success');
+//            redirect('paypal/index');
+        }else{
+            // the refund failed
+            $errorName = $res->details[0]->issue; // ex. 'Transaction Refused.'
+            $errorReason = $res->details[0]->description; // ex. 'The requested transaction has already been fully refunded.'
+            echo 'errorName: ' . $errorName . '<br/>';
+            echo 'errorReason: ' . $errorReason . '<br/>';
+//            $this->session->set_flashdata('error_msg','Refund failed' . '<br/>' . 'errorName: ' . $errorName . '<br/>' . 'errorReason: ' . $errorReason);
+//            redirect('paypal/index');
+        }
+    }
+
 }

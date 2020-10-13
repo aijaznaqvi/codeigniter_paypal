@@ -13,13 +13,34 @@
 
                 <form method="post" class="form-horizontal" role="form" action="<?= base_url() ?>paypal/create_payment_with_paypal">
                     <fieldset>
-                        <input title="item_name" name="item_name" type="hidden" value="ahmed fakhr">
-                        <input title="item_number" name="item_number" type="hidden" value="12345">
-                        <input title="item_description" name="item_description" type="hidden" value="to buy samsung smart tv">
-                        <input title="item_tax" name="item_tax" type="hidden" value="1">
-                        <input title="item_price" name="item_price" type="hidden" value="7">
-                        <input title="details_tax" name="details_tax" type="hidden" value="7">
-                        <input title="details_subtotal" name="details_subtotal" type="hidden" value="7">
+                        <div class="form-group">
+                            <label class="label label-primary">item_name</label>
+                            <input class="form-control" title="item_name" name="item_name" type="text" value="Syed Aijaz Hussain Naqvi">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">item_number</label>
+                            <input class="form-control" title="item_number" name="item_number" type="text" value="12345">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">item_description</label>
+                            <input class="form-control" title="item_description" name="item_description" type="text" value="Test Item Description">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">item_tax</label>
+                            <input class="form-control" title="item_tax" name="item_tax" type="text" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">item_price</label>
+                            <input class="form-control" title="item_price" name="item_price" type="text" value="7">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">details_tax</label>
+                            <input class="form-control" title="details_tax" name="details_tax" type="text" value="7">
+                        </div>
+                        <div class="form-group">
+                            <label class="label label-primary">details_subtotal</label>
+                            <input class="form-control" title="details_subtotal" name="details_subtotal" type="text" value="7">
+                        </div>
 
                         <div class="form-group">
                             <div class="col-sm-offset-5">

@@ -1,8 +1,8 @@
 <?php
 /** set your paypal credential **/
 
-$config['client_id'] = 'AYSq3RDGsmBLJE-otTkBtM-jBRd1TCQwFf9RGfwddNXWz0uFU9ztymylOhRS';
-$config['secret'] = 'EGnHDxD_qRPdaLdZz8iCr8N7_MzF-YHPTkjs6NKYQvQSBngp4PTTVWkPZRbL';
+$config['client_id'] = 'AbqfolVlfz83oAeZmhbztPaZaBZV7uH62w5SYVtLpaeRhD_2IPKrQw2Sc3YRhr8PSGFjYSOoyVUG5tZI';
+$config['secret'] = 'EKvSawiTVuOiHddWNuW-dTxkR01n5ZqZfvI08w3xohNXJljEVihrmkOGRt1TInQaSmTn7obxQwpxV8Dw';
 
 /**
  * SDK configuration

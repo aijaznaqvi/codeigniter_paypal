@@ -352,10 +352,10 @@ $config['rewrite_short_tags'] = TRUE;
 */
 $config['proxy_ips'] = '';
 
-function __autoload($class) {
+spl_autoload_register(function ($class) {
     if (file_exists(APPPATH."core/".$class.'.php')) {
         include_once(APPPATH."core/".$class.'.php');
     }
-}
+});
 /* End of file config.php */
 /* Location: ./application/config/config.php */

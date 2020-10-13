@@ -17,8 +17,8 @@
                         <input class="form-control" title="refund_amount" name="refund_amount" type="text" value="14.00">
                     </div>
                     <div class="form-group">
-                        <label class="label label-primary">TransacTion Id / Sale Id</label>
-                        <input class="form-control" readonly title="sale_id" name="sale_id" type="text" value="6X5513566V087383G">
+                        <label class="label label-primary">Transaction Id / Sale Id</label>
+                        <input class="form-control" title="sale_id" name="sale_id" type="text" value="54F878724V5089715">
                     </div>
                         <div class="form-group">
                             <div class="col-sm-offset-5">
